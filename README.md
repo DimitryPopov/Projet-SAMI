@@ -2,29 +2,31 @@
 
 ## 1. Présentation
 
-SAMI est un projet de robotique ayant pour objectif de faire naviguer de manière autonome un robot Lego EV3 entre différents points dans un environnement réel
+SAMI est un projet de robotique dont l’objectif est de faire naviguer de manière autonome un robot Lego EV3 entre différents points dans un environnement réel.
 
 Le robot doit :
 
-* déterminer un ordre de visite optimal des points
+* déterminer un ordre de visite des points aussi efficace que possible
 * suivre une trajectoire
 * s’adapter en temps réel grâce à un système de localisation externe (OptiTrack)
 
-Le projet est structuré en trois parties principales :
+Le projet s’organise autour de trois parties principales :
 
 * **Motion capture** : localisation du robot en temps réel
 * **Contrôle** : suivi de trajectoire et génération des commandes moteurs
 * **Planification de trajectoire** : optimisation de l’ordre de visite des points
 
-Ma contribution s’est concentrée sur la partie **planification**, en particulier la résolution d’un **problème du voyageur de commerce (TSP)**
+Ma contribution s’est concentrée sur la partie **planification**, à travers la résolution d’un **problème du voyageur de commerce (TSP)**.
 
 ---
 
 ## 2. Résultats
 
 * Le robot est capable de parcourir un ensemble de points dans une arène équipée de motion capture
-* Le système est complet : de la capture de position jusqu’à l’action des moteurs via TCP
-* L’approche combinant **plus proches voisins + 2-opt** permet de réduire significativement la distance totale parcourue par rapport à un ordre naïf
+* Le système fonctionne de bout en bout, de la capture de position jusqu’à l’action des moteurs via TCP
+* L’approche combinant **plus proches voisins et 2-opt** permet de réduire nettement la distance totale parcourue par rapport à un ordre naïf
+
+On observe notamment une diminution des croisements et des détours, ce qui rend les trajectoires plus naturelles et cohérentes.
 
 ---
 
@@ -37,18 +39,14 @@ Ma contribution s’est concentrée sur la partie **planification**, en particul
 
 ### Planification de trajectoire
 
-* Les points sont modélisés comme un **problème du voyageur de commerce (TSP)**
+Les points sont modélisés comme un **problème du voyageur de commerce (TSP)**.
 
-* Une première solution est obtenue avec l’heuristique des **plus proches voisins**
-  -> Rapide mais produit des trajets sous-optimaux (croisements, détours)
+Une première solution est obtenue avec l’heuristique des **plus proches voisins**.
+Cette méthode est rapide, mais elle produit souvent des trajets imparfaits, avec des croisements et des détours.
 
-* Cette solution est améliorée avec l’algorithme **2-opt (implémenté from scratch)**
-  -> Suppression des croisements et réduction de la distance totale
+La solution est ensuite améliorée à l’aide de l’algorithme **2-opt (implémenté from scratch)**, qui permet de corriger progressivement le trajet en réduisant sa longueur.
 
-* La combinaison des deux méthodes offre :
-
-  * une bonne efficacité de calcul
-  * une amélioration significative de la qualité du trajet
+La combinaison de ces deux approches offre un bon compromis entre simplicité de calcul et qualité du résultat.
 
 ### Contrôle
 
@@ -57,22 +55,17 @@ Ma contribution s’est concentrée sur la partie **planification**, en particul
 
 ### Communication
 
-* PC : client TCP (décision + calcul)
+* PC : client TCP (décision et calcul)
 * Robot : serveur TCP (exécution des commandes)
 
 ---
 
 ## 4. Remarques
 
-Ce projet met en évidence les limites des heuristiques gloutonnes : une méthode comme les plus proches voisins fournit rapidement une solution, mais souvent de qualité médiocre
+Ce projet met en évidence les limites des heuristiques gloutonnes : une méthode comme les plus proches voisins permet d’obtenir rapidement une solution, mais celle-ci reste souvent éloignée d’un bon résultat.
 
-L’utilisation d’une optimisation locale comme 2-opt permet d’améliorer significativement cette solution en corrigeant ses défauts structurels
+L’ajout d’une optimisation locale comme 2-opt permet d’améliorer significativement cette solution en corrigeant ses défauts les plus visibles.
 
-Plus généralement, ce travail illustre l’intérêt de combiner :
+Plus largement, ce travail montre l’intérêt de combiner une approche simple pour initialiser un problème, puis une méthode d’optimisation pour l’affiner, afin d’obtenir une solution efficace dans un contexte réel.
 
-* une heuristique rapide pour initialiser
-* une méthode d’optimisation pour affiner
-
-afin d’obtenir une solution efficace dans un contexte réel
-
-Pour plus de visualisations, voir le notebook associé
+Pour davantage de visualisations, le notebook associé permet de suivre plus en détail les différentes étapes.
