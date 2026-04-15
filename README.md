@@ -1,97 +1,78 @@
-# SAMI : Autonomous Robot Navigation with Motion Capture
+# SAMI — Navigation autonome de robot avec motion capture
 
-## 1. Overview
+## 1. Présentation
 
-SAMI is a robotics project focused on autonomous navigation of a Lego EV3 robot using an OptiTrack motion capture system. It implements a full control pipeline — from real-time position tracking to motor command generation with an emphasis on understanding path planning, feedback control, and robot-PC communication.
+SAMI est un projet de robotique ayant pour objectif de faire naviguer de manière autonome un robot Lego EV3 entre différents points dans un environnement réel
+
+Le robot doit :
+
+* déterminer un ordre de visite optimal des points
+* suivre une trajectoire
+* s’adapter en temps réel grâce à un système de localisation externe (OptiTrack)
+
+Le projet est structuré en trois parties principales :
+
+* **Motion capture** : localisation du robot en temps réel
+* **Contrôle** : suivi de trajectoire et génération des commandes moteurs
+* **Planification de trajectoire** : optimisation de l’ordre de visite des points
+
+Ma contribution s’est concentrée sur la partie **planification**, en particulier la résolution d’un **problème du voyageur de commerce (TSP)**
 
 ---
 
-## 2. Results
+## 2. Résultats
 
-- The robot successfully navigates a set of user-defined waypoints in a motion-capture arena
-- The pipeline demonstrates stable real-time control at 10 Hz
-- End-to-end system: from camera tracking to motor actuation over TCP
-- The 2-opt TSP optimization consistently reduces total travel distance compared to a naive ordering of waypoints
-- The feedback controller converges reliably under standard arena conditions; performance degrades at high speeds (PWM > 80) due to mechanical slip
+* Le robot est capable de parcourir un ensemble de points dans une arène équipée de motion capture
+* Le système est complet : de la capture de position jusqu’à l’action des moteurs via TCP
+* L’approche combinant **plus proches voisins + 2-opt** permet de réduire significativement la distance totale parcourue par rapport à un ordre naïf
 
 ---
 
-## 3. Method
+## 3. Méthode
 
 ### Motion capture
 
-- Position and orientation (yaw) of the robot are tracked in real time via OptiTrack cameras using the NatNet protocol
-- Data is received over UDP and parsed by a custom NatNet client
+* Position et orientation (yaw) obtenues en temps réel via OptiTrack
+* Données reçues en UDP et traitées via un client NatNet
 
-### Path planning
+### Planification de trajectoire
 
-- Waypoints are optimized using a **Travelling Salesman Problem** (TSP) heuristic:
-  - Nearest Neighbor algorithm for an initial solution
-  - 2-opt local search to remove crossing segments
-- The robot visits waypoints in the computed order
+* Les points sont modélisés comme un **problème du voyageur de commerce (TSP)**
 
-### Control
+* Une première solution est obtenue avec l’heuristique des **plus proches voisins**
+  -> Rapide mais produit des trajets sous-optimaux (croisements, détours)
 
-- A nonlinear feedback controller computes left and right motor speeds at each time step
-- Control law is based on the angular and linear error between the robot's current pose and the next waypoint
-- Commands are sent as `MOV <left> <right>;` strings over TCP at 10 Hz
+* Cette solution est améliorée avec l’algorithme **2-opt (implémenté from scratch)**
+  -> Suppression des croisements et réduction de la distance totale
+
+* La combinaison des deux méthodes offre :
+
+  * une bonne efficacité de calcul
+  * une amélioration significative de la qualité du trajet
+
+### Contrôle
+
+* Contrôleur de feedback non linéaire
+* Commandes moteurs calculées à partir de l’erreur de position et d’orientation
 
 ### Communication
 
-- **PC side**: TCP client sends motor commands and reads OptiTrack data
-- **Robot side**: TCP server running on the EV3 receives and interprets commands
-- Command format: `MOV`, `NOP`, `BIP`, `WIN`, `ERE`
+* PC : client TCP (décision + calcul)
+* Robot : serveur TCP (exécution des commandes)
 
 ---
 
-## 4. Data
+## 4. Remarques
 
-- `data.txt`: raw position and sensor logs from test sessions
-- `speed_data_pwm80.txt`: motor speed measurements at PWM = 80
-- `performance_test_1.txt`: timing and accuracy results from a navigation test
-- `PC/Tests/streamData/`: NatNet binary stream samples used for unit testing
+Ce projet met en évidence les limites des heuristiques gloutonnes : une méthode comme les plus proches voisins fournit rapidement une solution, mais souvent de qualité médiocre
 
----
+L’utilisation d’une optimisation locale comme 2-opt permet d’améliorer significativement cette solution en corrigeant ses défauts structurels
 
-## 5. Project Structure
+Plus généralement, ce travail illustre l’intérêt de combiner :
 
-```
-SAMI/
-├── PC/                          # PC-side code
-│   ├── PC.py                    # Main control loop (TSP + feedback controller)
-│   ├── TCPClient.py             # TCP client to communicate with robot
-│   ├── testopti.py              # OptiTrack connection test
-│   ├── config.ini               # OptiTrack configuration
-│   ├── src/                     # NatNet client library
-│   │   ├── Natnet_Client.py
-│   │   ├── NatNetDataModel.py
-│   │   ├── NatNetMessages.py
-│   │   ├── NatNetPacket.py
-│   │   ├── mocap_node.py
-│   │   ├── common.py
-│   │   └── debug.py
-│   ├── Tests/                   # Unit tests for NatNet parsing
-│   │   ├── testNatNet.py
-│   │   ├── testNatnetClient.py
-│   │   ├── testNode.py
-│   │   ├── testCommon.py
-│   │   ├── testAll.py
-│   │   └── streamData/          # Binary NatNet stream samples
-│   └── doc/                     # Hardware documentation and diagrams
-├── Robot/
-│   └── Robot.py                 # EV3 robot: TCP server + motor driver
-├── lessons/                     # Teaching resources
-│   ├── panel.py                 # Tkinter GUI for manual motor control
-│   ├── robot_server.py          # Simplified TCP server (pedagogical)
-│   ├── test_camera.py           # Camera test script
-│   └── optitrack-master/        # OptiTrack library and examples
-├── example_usage.py             # Standalone usage example
-├── math_utils.py                # Mathematical utilities
-└── README.md
-```
+* une heuristique rapide pour initialiser
+* une méthode d’optimisation pour affiner
 
----
+afin d’obtenir une solution efficace dans un contexte réel
 
-## 6. Notes
-
-This project emphasizes a practical implementation of autonomous robot control, combining motion capture tracking, path optimization, and real-time feedback. The NatNet client is a custom implementation of the OptiTrack NatNet SDK protocol, built from scratch to understand the underlying communication layer.
+Pour plus de visualisations, voir le notebook associé
